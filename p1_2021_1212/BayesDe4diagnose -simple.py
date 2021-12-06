@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 def get_ill(num,lower=0):
     """
     以均值2000，标准差1000生成患病数据
+
     :return:
     """
     mean_ill = 2000
