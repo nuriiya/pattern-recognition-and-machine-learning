@@ -71,29 +71,31 @@ def verifier(test_label, predict_label):
     count_normal = 0
     count_err_normal = 0
     count_err_sick = 0
-    count_real_test_num = 0
+    count_ill_real_test_num = 0
     for index, value in enumerate(test_label):
         info = "{:8d} 白细胞浓度{:>15.5f} 实际{:>10} 预测{:>10}". \
             format(index, test_value[index], "患病" if value == 1 else "不患病",
                    "患病" if predict_label[index] == 1 else "不患病")
 
 
-        if value == -1:
+        if test_label[index] == -1:
             count_normal += 1
         else:
-            count_real_test_num += 1
+            count_ill_real_test_num += 1
         if test_label[index] != predict_label[index]:
-            print("\033[1;43m", info, "\033[0m")
-            if value == -1:
+            # 明明患病但是判断为了没患病
+            if predict_label[index] == -1:
+
                 count_err_sick += 1
+            # 明明没患病但是判断为患病
             else:
                 count_err_normal += 1
-        else:
-            print("\033[1;42m", info, "\033[0m")
 
     info = "总错误率：{}\n".format((count_err_sick + count_err_normal) / len(test_label))
-    info += "患病者错误率：{}".format(count_err_sick / count_real_test_num)
-    print("\033[1;33m", info, "\033[0m")
+    info += "患病者明明患病但是被判为没患病错误率：{}\n".format(count_err_sick / count_ill_real_test_num)
+    info += "患病者明明没有患病但被判为患病错误率：{}".format(count_err_normal / count_ill_real_test_num)
+
+    print(info)
 
 class LeukemiaClassifierModule:
     def __init__(self):
@@ -109,7 +111,7 @@ class LeukemiaClassifierModule:
         sick = []
         normal_num = 0
         for ind, val in enumerate(train_label):
-            if 1 == val:
+            if -1 == val:
                 normal.append(train_data[ind])
                 normal_num += 1
             else:
@@ -135,9 +137,9 @@ class LeukemiaClassifierModule:
         for ind, val in enumerate(test_data):
             # p(correct) = p(x|w=2)p(w=2) + p(x|w=1)*p(w=1)
             # 翻译成文字： 就是当病人有白血病时，判断为白血病的几率  加上 正常人没有白血病的几率被判断为没有白血病的几率
-            p1 = st.norm(self.train_mean_normal, self.train_mean_sick).pdf(val) * self.normal_rate
-            p2 = st.norm(self.train_std_normal, self.train_std_sick).pdf(val) * self.sick_rate
-            if p1 > p2:
+            p1 = st.norm(self.train_mean_normal, self.train_std_normal).pdf(val) * self.normal_rate
+            p2 = st.norm(self.train_mean_sick, self.train_std_sick).pdf(val) * self.sick_rate
+            if p1 < p2:
                 res.append(1)
             else:
                 res.append(-1)
@@ -152,7 +154,7 @@ class LeukemiaClassifierModule:
             p1 = st.norm(self.train_mean_normal, self.train_std_normal).pdf(val) * self.normal_rate
             p2 = st.norm(self.train_mean_sick, self.train_std_sick).pdf(val) * self.sick_rate
             # 和最小错误率不同的是这里乘以了一个倍率
-            if p1 > risk_ratio * p2:
+            if p1 < risk_ratio * p2:
                 res.append(1)
             else:
                 res.append(-1)
@@ -188,3 +190,4 @@ if __name__ == "__main__":
     # 最小风险决策下的train——label
     risk_predict_label = ill_or_not.Predict_Minimun_Risk(test_value, 100)
     verifier(test_label, risk_predict_label)
+
