@@ -8,6 +8,7 @@
 import numpy as np
 import scipy.stats as st
 import matplotlib as plt
+import random
 
 all_subject_number = 10000
 train_percent = 0.7
@@ -17,29 +18,64 @@ normal_standard_deviation = 3000
 ill_mean = 2000
 normal_mean = 7000
 ill_percent = 0.005
+normal_percent = 1 - ill_percent
 
-def create_ill_sample(normal_mean, normal_standard_deviation,  all_subject_number, ill_percent):
+def create_ill_sample(ill_mean, ill_standard_deviation,  all_subject_number, ill_percent):
     sample_ill = np.array([])
     ill_num = ill_percent * all_subject_number
-    for i in range(0,int(ill_num)):
+    i = 0
+    while i < int(ill_num):
         ill_leverage = np.random.normal(ill_mean,ill_standard_deviation)
-        if(ill_leverage <= 0):
-            i -= 1
+        if ill_leverage <= 0:
+            i = i
+
             continue
-        sample_ill = np.append(sample_ill, ill_leverage)
+        else:
+           sample_ill = np.append(sample_ill, ill_leverage)
+           i = i + 1
     return sample_ill
 
-def create_normal_sample(ill_mean, ill_standard_deviation,  all_subject_number, ill_percent):
-    sample_ill = np.array([])
-    ill_num = ill_percent * all_subject_number
-    for i in range(0,int(ill_num)):
-        ill_leverage = np.random.normal(ill_mean,ill_standard_deviation)
-        if(ill_leverage <= 0):
-            i -= 1
+def create_normal_sample(normal_mean, normal_standard_deviation,  all_subject_number, normal_percent):
+    sample_normal = np.array([])
+    normal_num = normal_percent * all_subject_number
+    i = 0
+    while i < int(normal_num):
+        normal_leverage = np.random.normal(normal_mean, normal_standard_deviation)
+        if normal_leverage <= 0:
+            i = i
             continue
-        sample_ill = np.append(sample_ill, ill_leverage)
-    return sample_ill
+        else:
+            sample_normal = np.append(sample_normal, normal_leverage)
+            i += 1
+    return sample_normal
+
+def mix_sample(ill_sample, healthy_sample):
+    random_sample = []
+    i = 0
+    b = 0
+    c = 0
+    while i < int(all_subject_number):
+        rand = random.random()
+        if rand <= ill_percent and b < all_subject_number * ill_percent:
+            random_sample.append([1, ill_sample[b]])
+            b += 1
+        elif c < all_subject_number * normal_percent:
+            random_sample.append([0, healthy_sample[c]])
+            c += 1
+        i += 1
+    return random_sample
+
 if __name__ == "__main__":
     all_ill_sample = create_ill_sample(ill_mean,ill_standard_deviation, all_subject_number,ill_percent)
-    print("生病人数：\n", np.shape(all_ill_sample), "\n具体数值：\n", all_ill_sample)
-    all_healthy_sample = create_normal_sample()
+    print("生病人数：\n", np.shape(all_ill_sample))
+    all_healthy_sample = create_normal_sample(normal_mean, normal_standard_deviation, all_subject_number, normal_percent)
+    print("正常人数：\n", np.shape(all_healthy_sample))
+
+    dataset = mix_sample(all_ill_sample, all_healthy_sample)
+
+    train_set = dataset[:int(all_subject_number * train_percent)]
+    print("这里是测试集：", np.shape(train_set))
+    test_set = dataset[int(all_subject_number * train_percent):]
+    print("这里是训练集：", np.shape(test_set))
+
+
